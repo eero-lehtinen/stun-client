@@ -4,8 +4,7 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 
 use async_std::net::{SocketAddr, ToSocketAddrs};
-use pnet::datalink;
-use pnet::ipnetwork::IpNetwork;
+use local_ip_address::list_afinet_netifas;
 
 use super::client::*;
 use super::error::*;
@@ -59,10 +58,7 @@ pub async fn check_nat_mapping_behavior<A: ToSocketAddrs>(
     };
 
     // get NIC IPs
-    let local_ips: Vec<IpNetwork> = datalink::interfaces()
-        .iter()
-        .flat_map(|i| i.ips.clone())
-        .collect();
+    let local_ips = list_afinet_netifas().unwrap();
 
     // Test1
     // Send a Binding request and check the Endpoint mapped to NAT.
@@ -76,22 +72,18 @@ pub async fn check_nat_mapping_behavior<A: ToSocketAddrs>(
     )?);
     match result.test1_xor_mapped_addr.unwrap().ip() {
         IpAddr::V4(addr) => {
-            for local_ip in local_ips {
-                if let IpNetwork::V4(v4_lip) = local_ip {
-                    if v4_lip.ip() == addr {
-                        result.mapping_type = NATMappingType::NoNAT;
-                        return Ok(result);
-                    }
+            for (_, local_ip) in local_ips {
+                if local_ip == addr {
+                    result.mapping_type = NATMappingType::NoNAT;
+                    return Ok(result);
                 }
             }
         }
         IpAddr::V6(addr) => {
-            for local_ip in local_ips {
-                if let IpNetwork::V6(v6_lip) = local_ip {
-                    if v6_lip.ip() == addr {
-                        result.mapping_type = NATMappingType::NoNAT;
-                        return Ok(result);
-                    }
+            for (_, local_ip) in local_ips {
+                if local_ip == addr {
+                    result.mapping_type = NATMappingType::NoNAT;
+                    return Ok(result);
                 }
             }
             return Err(STUNClientError::ParseError());
