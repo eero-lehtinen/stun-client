@@ -1,7 +1,6 @@
 //! This module is for NAT Behavior Discovery based on RFC5780.
 //! To use this module, the STUN server side must support the OTHER-ADDRESS and CHANGE-REQUEST attributes.
 use std::collections::HashMap;
-use std::net::IpAddr;
 
 use async_std::net::{SocketAddr, ToSocketAddrs};
 use local_ip_address::list_afinet_netifas;
@@ -70,23 +69,11 @@ pub async fn check_nat_mapping_behavior<A: ToSocketAddrs>(
     result.test1_xor_mapped_addr = Some(Attribute::get_xor_mapped_address(&t1_res).ok_or(
         STUNClientError::NotSupportedError(String::from("XOR-MAPPED-ADDRESS")),
     )?);
-    match result.test1_xor_mapped_addr.unwrap().ip() {
-        IpAddr::V4(addr) => {
-            for (_, local_ip) in local_ips {
-                if local_ip == addr {
-                    result.mapping_type = NATMappingType::NoNAT;
-                    return Ok(result);
-                }
-            }
-        }
-        IpAddr::V6(addr) => {
-            for (_, local_ip) in local_ips {
-                if local_ip == addr {
-                    result.mapping_type = NATMappingType::NoNAT;
-                    return Ok(result);
-                }
-            }
-            return Err(STUNClientError::ParseError());
+    let addr = result.test1_xor_mapped_addr.unwrap().ip();
+    for (_, local_ip) in local_ips {
+        if local_ip == addr {
+            result.mapping_type = NATMappingType::NoNAT;
+            return Ok(result);
         }
     }
 
