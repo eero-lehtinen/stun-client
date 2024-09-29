@@ -57,7 +57,7 @@ pub async fn check_nat_mapping_behavior<A: ToSocketAddrs>(
     };
 
     // get NIC IPs
-    let local_ips = list_afinet_netifas().unwrap();
+    let local_ips = list_afinet_netifas().unwrap_or_default();
 
     // Test1
     // Send a Binding request and check the Endpoint mapped to NAT.
